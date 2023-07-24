@@ -50,6 +50,8 @@ class MoveIt2:
         ignore_new_calls_while_executing: bool = False,
         callback_group: Optional[CallbackGroup] = None,
         follow_joint_trajectory_action_name: str = "joint_trajectory_controller/follow_joint_trajectory",
+        pipeline_id: str = "pilz_industrial_motion_planner",
+        planner_id: str = "PTP"
     ):
         """
         Construct an instance of `MoveIt2` interface.
@@ -200,6 +202,8 @@ class MoveIt2:
             frame_id=base_link_name,
             group_name=group_name,
             end_effector=end_effector_name,
+            pipeline_id=pipeline_id,
+            planner_id=planner_id
         )
 
         # Flag to determine whether to execute trajectories via MoveIt2, or rather by calling a separate action with the controller itself
@@ -1163,7 +1167,7 @@ class MoveIt2:
 
     @classmethod
     def __init_move_action_goal(
-        cls, frame_id: str, group_name: str, end_effector: str
+        cls, frame_id: str, group_name: str, end_effector: str, pipeline_id: str, planner_id: str,
     ) -> MoveGroup.Goal:
         move_action_goal = MoveGroup.Goal()
         move_action_goal.request.workspace_parameters.header.frame_id = frame_id
@@ -1179,8 +1183,8 @@ class MoveIt2:
         # move_action_goal.request.path_constraints = "Ignored"
         # move_action_goal.request.trajectory_constraints = "Ignored"
         # move_action_goal.request.reference_trajectories = "Ignored"
-        # move_action_goal.request.pipeline_id = "Ignored"
-        # move_action_goal.request.planner_id = "Ignored"
+        move_action_goal.request.pipeline_id = pipeline_id
+        move_action_goal.request.planner_id = planner_id
         move_action_goal.request.group_name = group_name
         move_action_goal.request.num_planning_attempts = 5
         move_action_goal.request.allowed_planning_time = 0.5
@@ -1297,6 +1301,22 @@ class MoveIt2:
     @allowed_planning_time.setter
     def allowed_planning_time(self, value: float):
         self.__move_action_goal.request.allowed_planning_time = value
+
+    @property
+    def planner_id(self):
+        return self.__move_action_goal.request.planner_id
+    
+    @planner_id.setter
+    def planner_id(self, value: str):
+        self.__move_action_goal.request.planner_id = value
+
+    @property
+    def pipeline_id(self):
+        return self.__move_action_goal.request.pipeline_id
+    
+    @pipeline_id.setter
+    def pipeline_id(self, value: str):
+        self.__move_action_goal.request.pipeline_id = value
 
 
 def init_joint_state(
