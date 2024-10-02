@@ -2,15 +2,17 @@
 """
 Example of adding and removing a collision object with a mesh geometry.
 Note: Python module `trimesh` is required for this example (`pip install trimesh`).
-`ros2 run pymoveit2 ex_collision_object.py --ros-args -p action:="add" -p position:="[0.5, 0.0, 0.5]" -p quat_xyzw:="[0.0, 0.0, -0.707, 0.707]"`
-`ros2 run pymoveit2 ex_collision_object.py --ros-args -p action:="add" -p filepath:="./my_favourity_mesh.stl"`
-`ros2 run pymoveit2 ex_collision_object.py --ros-args -p action:="remove"`
+- ros2 run pymoveit2 ex_collision_mesh.py --ros-args -p position:="[0.5, 0.0, 0.5]" -p quat_xyzw:="[0.0, 0.0, -0.7071, 0.7071]" -p scale:="[1.0, 1.0, 1.0]"
+- ros2 run pymoveit2 ex_collision_mesh.py --ros-args -p action:="move" -p position:="[0.2, 0.0, 0.2]"
+- ros2 run pymoveit2 ex_collision_mesh.py --ros-args -p filepath:="./my_favourity_mesh.stl"
+- ros2 run pymoveit2 ex_collision_mesh.py --ros-args -p action:="remove"
 """
 
 from os import path
 from threading import Thread
 
 import rclpy
+import trimesh
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 
@@ -26,7 +28,7 @@ def main():
     rclpy.init()
 
     # Create node for this example
-    node = Node("ex_collision_object")
+    node = Node("ex_collision_mesh")
 
     # Declare parameter for joint positions
     node.declare_parameter(
@@ -38,7 +40,9 @@ def main():
         "add",
     )
     node.declare_parameter("position", [0.5, 0.0, 0.5])
-    node.declare_parameter("quat_xyzw", [0.0, 0.0, -0.707, 0.707])
+    node.declare_parameter("quat_xyzw", [0.0, 0.0, -0.7071, 0.7071])
+    node.declare_parameter("scale", [1.0, 1.0, 1.0])
+    node.declare_parameter("preload_mesh", False)
 
     # Create callback group that allows execution of callbacks in parallel without restrictions
     callback_group = ReentrantCallbackGroup()
@@ -53,21 +57,26 @@ def main():
         callback_group=callback_group,
     )
 
-    # Spin the node in background thread(s)
+    # Spin the node in background thread(s) and wait a bit for initialization
     executor = rclpy.executors.MultiThreadedExecutor(2)
     executor.add_node(node)
     executor_thread = Thread(target=executor.spin, daemon=True, args=())
     executor_thread.start()
+    node.create_rate(1.0).sleep()
 
     # Get parameters
     filepath = node.get_parameter("filepath").get_parameter_value().string_value
     action = node.get_parameter("action").get_parameter_value().string_value
     position = node.get_parameter("position").get_parameter_value().double_array_value
     quat_xyzw = node.get_parameter("quat_xyzw").get_parameter_value().double_array_value
+    scale = node.get_parameter("scale").get_parameter_value().double_array_value
+    preload_mesh = node.get_parameter("preload_mesh").get_parameter_value().bool_value
 
     # Use the default example mesh if invalid
     if not filepath:
-        node.get_logger().info(f"Using the default example mesh file")
+        node.get_logger().info(
+            f"Using the default example mesh file {DEFAULT_EXAMPLE_MESH}"
+        )
         filepath = DEFAULT_EXAMPLE_MESH
 
     # Make sure the mesh file exists
@@ -77,22 +86,47 @@ def main():
         exit(1)
 
     # Determine ID of the collision mesh
-    mesh_id = path.basename(filepath).split(".")[0]
+    object_id = path.basename(filepath).split(".")[0]
 
-    if "add" == action:
+    if action == "add":
         # Add collision mesh
         node.get_logger().info(
-            f"Adding collision mesh '{filepath}' {{position: {list(position)}, quat_xyzw: {list(quat_xyzw)}}}"
+            f"Adding collision mesh '{filepath}' "
+            f"{{position: {list(position)}, quat_xyzw: {list(quat_xyzw)}}}"
         )
+
+        # Load the mesh if specified
+        mesh = None
+        if preload_mesh:
+            mesh = trimesh.load(filepath)
+            filepath = None
+
         moveit2.add_collision_mesh(
-            filepath=filepath, id=mesh_id, position=position, quat_xyzw=quat_xyzw
+            filepath=filepath,
+            id=object_id,
+            position=position,
+            quat_xyzw=quat_xyzw,
+            scale=scale,
+            mesh=mesh,
         )
-    else:
+    elif action == "remove":
         # Remove collision mesh
-        node.get_logger().info(f"Removing collision mesh with ID '{mesh_id}'")
-        moveit2.remove_collision_mesh(id=mesh_id)
+        node.get_logger().info(f"Removing collision mesh with ID '{object_id}'")
+        moveit2.remove_collision_object(id=object_id)
+    elif action == "move":
+        # Move collision mesh
+        node.get_logger().info(
+            f"Moving collision mesh with ID '{object_id}' to "
+            f"{{position: {list(position)}, quat_xyzw: {list(quat_xyzw)}}}"
+        )
+        moveit2.move_collision(id=object_id, position=position, quat_xyzw=quat_xyzw)
+    else:
+        raise ValueError(
+            f"Unknown action '{action}'. Valid values are 'add', 'remove', 'move'"
+        )
 
     rclpy.shutdown()
+    executor_thread.join()
     exit(0)
 
 
