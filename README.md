@@ -29,7 +29,7 @@ Basic Python interface for MoveIt 2 built on top of ROS 2 actions and services.
 
 These are the primary dependencies required to use this project.
 
-- ROS 2 [Galactic](https://docs.ros.org/en/galactic/Installation.html), [Humble](https://docs.ros.org/en/humble/Installation.html) or [Rolling](https://docs.ros.org/en/rolling/Installation.html) (tested June 2022)
+- ROS 2 [Galactic](https://docs.ros.org/en/galactic/Installation.html), [Humble](https://docs.ros.org/en/humble/Installation.html) or [Iron](https://docs.ros.org/en/iron/Installation.html)
 - [MoveIt 2](https://moveit.ros.org/install-moveit2/binary) corresponding to the selected ROS 2 distribution
 
 All additional dependencies are installed via [rosdep](https://wiki.ros.org/rosdep) during the building process below.
@@ -81,8 +81,10 @@ ros2 run pymoveit2 ex_pose_goal.py --ros-args -p position:="[0.25, 0.0, 1.0]" -p
 ros2 run pymoveit2 ex_gripper.py --ros-args -p action:="toggle"
 # Example of using MoveIt 2 Servo to move the end-effector in a circular motion
 ros2 run pymoveit2 ex_servo.py
-# Example of adding a collision object to the planning scene of MoveIt 2
-ros2 run pymoveit2 ex_collision_object.py --ros-args -p action:="add" -p position:="[0.5, 0.0, 0.5]" -p quat_xyzw:="[0.0, 0.0, -0.707, 0.707]"
+# Example of adding a collision object with primitive geometry to the planning scene of MoveIt 2
+ros2 run pymoveit2 ex_collision_primitive.py --ros-args -p shape:="sphere" -p position:="[0.5, 0.0, 0.5]" -p dimensions:="[0.04]"
+# Example of adding a collision object with mesh geometry to the planning scene of MoveIt 2
+ros2 run pymoveit2 ex_collision_mesh.py --ros-args -p action:="add" -p position:="[0.5, 0.0, 0.5]" -p quat_xyzw:="[0.0, 0.0, -0.707, 0.707]"
 ```
 
 ## Directory Structure
